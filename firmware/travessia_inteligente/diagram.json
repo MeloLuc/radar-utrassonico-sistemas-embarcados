@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "author": "Equipe - Travessia Inteligente",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 120, "left": 0, "attrs": {} },
+    { "type": "wokwi-hc-sr04", "id": "ultrasonic1", "top": -120, "left": 60, "attrs": { "distance": "350" } },
+    { "type": "wokwi-servo", "id": "servo1", "top": 420, "left": 360, "attrs": {} },
+    { "type": "wokwi-led", "id": "ledCarR", "top": -60, "left": 420, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "ledCarY", "top": -60, "left": 470, "attrs": { "color": "yellow" } },
+    { "type": "wokwi-led", "id": "ledCarG", "top": -60, "left": 520, "attrs": { "color": "limegreen" } },
+    { "type": "wokwi-led", "id": "ledPedR", "top": -60, "left": 600, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "ledPedG", "top": -60, "left": 650, "attrs": { "color": "limegreen" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": 40, "left": 400, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r2", "top": 40, "left": 450, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r3", "top": 40, "left": 500, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r4", "top": 40, "left": 580, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r5", "top": 40, "left": 630, "rotate": 90, "attrs": { "value": "220" } },
+    { "type": "wokwi-pushbutton", "id": "btnPed", "top": 200, "left": 420, "attrs": { "color": "yellow", "label": "Pedestre (D2)" } },
+    { "type": "wokwi-pushbutton", "id": "btnModo", "top": 280, "left": 420, "attrs": { "color": "blue", "label": "Modo (D4)" } },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": 180, "left": 600, "attrs": { "volume": "0.2" } }
+  ],
+  "connections": [
+    [ "uno:5V", "ultrasonic1:VCC", "red", [] ],
+    [ "uno:GND.2", "ultrasonic1:GND", "black", [] ],
+    [ "uno:6", "ultrasonic1:TRIG", "green", [] ],
+    [ "uno:7", "ultrasonic1:ECHO", "blue", [] ],
+
+    [ "uno:5V", "servo1:V+", "red", [] ],
+    [ "uno:GND.3", "servo1:GND", "black", [] ],
+    [ "uno:9", "servo1:PWM", "orange", [] ],
+
+    [ "uno:11", "ledCarR:A", "red", [] ],
+    [ "uno:5", "ledCarY:A", "gold", [] ],
+    [ "uno:3", "ledCarG:A", "green", [] ],
+    [ "uno:12", "ledPedR:A", "red", [] ],
+    [ "uno:13", "ledPedG:A", "green", [] ],
+    [ "ledCarR:C", "r1:1", "black", [] ],
+    [ "ledCarY:C", "r2:1", "black", [] ],
+    [ "ledCarG:C", "r3:1", "black", [] ],
+    [ "ledPedR:C", "r4:1", "black", [] ],
+    [ "ledPedG:C", "r5:1", "black", [] ],
+    [ "r1:2", "uno:GND.1", "black", [] ],
+    [ "r2:2", "uno:GND.1", "black", [] ],
+    [ "r3:2", "uno:GND.1", "black", [] ],
+    [ "r4:2", "uno:GND.1", "black", [] ],
+    [ "r5:2", "uno:GND.1", "black", [] ],
+
+    [ "uno:2", "btnPed:1.l", "violet", [] ],
+    [ "btnPed:2.l", "uno:GND.1", "black", [] ],
+    [ "uno:4", "btnModo:1.l", "cyan", [] ],
+    [ "btnModo:2.l", "uno:GND.1", "black", [] ],
+
+    [ "uno:8", "bz1:2", "purple", [] ],
+    [ "bz1:1", "uno:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}

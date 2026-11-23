@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Travessia Inteligente</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Semáforo de pedestres com cancela automática: Arduino Uno, HC-SR04, servo SG90 e FreeRTOS, em 3D.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/style.css?v=7">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#inicio" aria-label="Travessia Inteligente, início">
+    <svg width="22" height="34" viewBox="0 0 22 34" aria-hidden="true"><rect x="1" y="1" width="20" height="32" rx="4" fill="#15262d" stroke="#22404a"/><circle cx="11" cy="8" r="4" fill="#ef4f4f"/><circle cx="11" cy="17" r="4" fill="#f3b324" opacity=".35"/><circle cx="11" cy="26" r="4" fill="#39d17c" opacity=".35"/></svg>
+    <span><b>Travessia Inteligente</b><small>Sistemas Embarcados · Arduino + FreeRTOS</small></span>
+  </a>
+  <nav class="nav" aria-label="Seções">
+    <a href="#inicio" data-view="inicio">Início</a>
+    <a href="#projeto" data-view="projeto">Projeto</a>
+    <a href="#simulacao" data-view="simulacao">Simulação</a>
+    <a href="#apresentacao" data-view="apresentacao">Apresentação</a>
+  </nav>
+</header>
+
+<main>
+  <!-- ======================= INÍCIO ======================= -->
+  <section id="view-inicio" class="view" aria-label="Início">
+    <div class="hero">
+      <div class="hero-3d" id="hero3d"></div>
+      <div class="hero-shade"></div>
+      <div class="hero-copy">
+        <div class="eyebrow">ARDUINO UNO · HC-SR04 · SG90 · FreeRTOS</div>
+        <h1>Travessia<br><span>Inteligente</span></h1>
+        <p class="lead">O projeto do vídeo (sensor ultrassônico que move um servo) virou um semáforo de pedestres com cancela automática. O botão pede a travessia, o sensor confere se ainda há alguém na faixa e o servo baixa a cancela para os carros.</p>
+        <div class="hero-cta">
+          <a class="btn primary" href="#projeto">Abrir o projeto 3D</a>
+          <a class="btn" href="#simulacao">Ver a simulação na rua</a>
+          <a class="btn ghost" href="#apresentacao">Apresentação</a>
+        </div>
+        <div class="hero-facts">
+          <div><b>11</b><span>pinos usados no Uno</span></div>
+          <div><b>5 + 1</b><span>tarefas RTOS + ISR</span></div>
+          <div><b>6</b><span>estados na FSM</span></div>
+        </div>
+      </div>
+      <div class="hero-hint">Arraste para girar · o sistema está rodando ao vivo</div>
+    </div>
+  </section>
+
+  <!-- ======================= PROJETO ======================= -->
+  <section id="view-projeto" class="view workspace" aria-label="Projeto">
+    <aside class="side parts">
+      <div>
+        <div class="label">Lista de materiais</div>
+        <h2 id="bomTitle">Sistema completo</h2>
+      </div>
+      <p class="hint">Clique numa peça (aqui ou no 3D) para ver especificação, função, ligação e o trecho de código.</p>
+      <ul class="bom" id="bom"></ul>
+    </aside>
+
+    <div class="stage">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Circuito">
+          <button id="varCompleto" aria-pressed="true">Sistema completo</button>
+          <button id="varVideo" aria-pressed="false">Circuito do vídeo</button>
+        </div>
+        <span class="sep"></span>
+        <button class="btn primary" id="projRun"><svg viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z" fill="currentColor"/></svg><span>Iniciar simulação</span></button>
+        <button class="btn" id="projReset" title="Reiniciar o Arduino"><svg viewBox="0 0 14 14"><path d="M2.5 7a4.5 4.5 0 1 0 1.4-3.3M2.5 1.5v3h3" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>Reset</button>
+        <button class="btn" id="projCode"><svg viewBox="0 0 14 14"><path d="M5 3 1 7l4 4M9 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>Mostrar código</button>
+        <button class="btn ghost small" id="projSound" aria-pressed="false">Som: desligado</button>
+        <span class="clock" id="projClock">00:00.000</span>
+      </div>
+      <div class="canvas-host" id="proj3d">
+        <div class="float-ctrl" id="projCtrl">
+          <button class="fc-toggle label" id="projCtrlToggle" aria-expanded="true" aria-controls="projCtrlBody">Entradas simuladas <span aria-hidden="true">▾</span></button>
+          <div class="fc-body" id="projCtrlBody">
+            <label for="distSlider">HC-SR04 · distância</label>
+            <input type="range" id="distSlider" min="2" max="400" value="350">
+            <div class="dist-read"><span>2 cm</span><b id="distVal">350 cm</b><span>400 cm</span></div>
+            <div class="row" id="ctrlTravessia">
+              <button class="btn small" id="btnD2">Apertar D2 (pedestre)</button>
+              <button class="btn small" id="btnD4">Apertar D4 (modo)</button>
+              <button class="btn small danger" id="btnSensorFault" aria-pressed="false">Desconectar sensor</button>
+            </div>
+          </div>
+        </div>
+        <div class="legend-hint" id="projHint">Arraste para girar · role para zoom · clique numa peça</div>
+        <div class="tip" id="projTip" hidden></div>
+      </div>
+      <div class="serial" id="projSerial">
+        <div class="serial-head">
+          <span class="label">Monitor Serial · 9600 bps</span>
+          <button class="btn ghost small" id="projSerialClear">Limpar</button>
+          <button class="btn ghost small" id="projSerialToggle">Recolher</button>
+        </div>
+        <div class="serial-out" id="projSerialOut" aria-live="off"></div>
+        <form class="serial-in" id="projSerialForm">
+          <input id="projSerialInput" placeholder="Envie N, D, P, S ou outro caractere" autocomplete="off" aria-label="Comando UART">
+          <button class="btn small" type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
+
+    <aside class="info" id="info" hidden aria-label="Detalhes da peça">
+      <div class="info-head">
+        <div><div class="label" id="infoCat">Peça</div><h2 id="infoName">—</h2></div>
+        <button class="btn ghost small x" id="infoClose" aria-label="Fechar detalhes">Fechar</button>
+      </div>
+      <div class="info-body" id="infoBody"></div>
+    </aside>
+  </section>
+
+  <!-- ======================= SIMULAÇÃO ======================= -->
+  <section id="view-simulacao" class="view workspace" aria-label="Simulação">
+    <div class="stage">
+      <div class="toolbar">
+        <span class="label">Aplicação</span>
+        <div class="seg" role="group" aria-label="Aplicação">
+          <button id="appTravessia" aria-pressed="true">Travessia de pedestres</button>
+          <button id="appEstac" aria-pressed="false">Cancela de estacionamento</button>
+        </div>
+        <span class="sep"></span>
+        <button class="btn stop" id="simRun"><svg viewBox="0 0 14 14"><rect x="3" y="2" width="3" height="10" fill="currentColor"/><rect x="8" y="2" width="3" height="10" fill="currentColor"/></svg><span>Pausar</span></button>
+        <div class="seg" role="group" aria-label="Velocidade">
+          <button data-speed="1" aria-pressed="true">1×</button>
+          <button data-speed="2" aria-pressed="false">2×</button>
+          <button data-speed="4" aria-pressed="false">4×</button>
+        </div>
+        <button class="btn" id="simCode"><svg viewBox="0 0 14 14"><path d="M5 3 1 7l4 4M9 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>Mostrar código</button>
+        <span class="clock" id="simClock">00:00.000</span>
+      </div>
+      <div class="canvas-host" id="sim3d">
+        <div class="hud" id="hud">
+          <div class="hud-card">
+            <div class="hud-state"><b id="hudState">VEIC_VERDE</b><span id="hudTime">0.0 s</span></div>
+            <div class="bar"><i id="hudBar"></i></div>
+            <div class="hud-lights" id="hudLights">
+              <span>Veículos <i class="lamp r" id="lR"></i> <i class="lamp y" id="lY"></i> <i class="lamp g" id="lG"></i></span>
+              <span>Pedestre <i class="lamp r" id="lPR"></i> <i class="lamp g" id="lPG"></i></span>
+            </div>
+            <div class="hud-meta" id="hudMeta"></div>
+          </div>
+        </div>
+        <div class="legend-hint">Passe o mouse sobre semáforos, cancela, sensor, botão, carros e pedestres</div>
+        <div class="tip" id="simTip" hidden></div>
+      </div>
+    </div>
+
+    <aside class="side right" id="simSide">
+      <div id="sideTravessia" class="ctrl-group" style="gap:14px">
+        <div class="ctrl-group">
+          <div class="label">Cenário normal</div>
+          <div class="row">
+            <button class="btn small" id="sPed">Novo pedestre</button>
+            <button class="btn small" id="sBtn">Apertar botão (D2)</button>
+          </div>
+          <div class="row">
+            <button class="btn small" id="sCars" aria-pressed="true">Tráfego de carros</button>
+            <button class="btn small" id="sAuto" aria-pressed="true">Pedestres automáticos</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="label">Falha ou limite</div>
+          <div class="row">
+            <button class="btn small warn" id="sSlow">Pedestre idoso (extensão)</button>
+            <button class="btn small warn" id="sStuck">Pessoa parada na faixa</button>
+          </div>
+          <div class="row">
+            <button class="btn small danger" id="sFault" aria-pressed="false">Desconectar sensor</button>
+            <button class="btn small warn" id="sSpam">Bounce: 10 toques</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="label">Modo (desafio adicional)</div>
+          <div class="row">
+            <button class="btn small" id="sNight">UART: N (noturno)</button>
+            <button class="btn small" id="sDay">UART: D (diurno)</button>
+            <button class="btn small" id="sD4">Botão D4</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="label">Máquina de estados</div>
+          <svg class="fsm-mini" id="fsmMini" viewBox="0 0 300 120" aria-label="Estado atual da máquina"></svg>
+        </div>
+        <div class="ctrl-group">
+          <div class="label">Tarefas do FreeRTOS (atividade)</div>
+          <div class="tasks" id="tasks"></div>
+        </div>
+      </div>
+
+      <div id="sideEstac" class="ctrl-group" style="gap:14px" hidden>
+        <div class="ctrl-group">
+          <div class="label">Código original do vídeo</div>
+          <p class="hint">Mesmo firmware do vídeo: <code>distance_cm &lt; DISTANCE_THRESHOLD</code> → servo 90° (cancela sobe). O sensor fica no poste, na altura do para-choque, a 1 m do eixo da faixa; o limiar foi ajustado para 150 cm.</p>
+          <div class="row">
+            <button class="btn small" id="eCar">Chegar carro</button>
+            <button class="btn small" id="eAuto" aria-pressed="true">Carros automáticos</button>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="label">Falha ou limite</div>
+          <div class="row">
+            <button class="btn small danger" id="eFault" aria-pressed="false">Desconectar sensor</button>
+            <button class="btn small warn" id="eTruck">Chegar caminhão longo</button>
+          </div>
+          <p class="hint">Sem eco, <code>pulseIn()</code> devolve 0 → 0 cm → a cancela abre sozinha. Com veículo longo, a cancela pode fechar em cima dele. As duas falhas foram corrigidas no firmware da travessia.</p>
+        </div>
+      </div>
+
+      <div class="serial" id="simSerial">
+        <div class="serial-head">
+          <span class="label">Monitor Serial</span>
+          <button class="btn ghost small" id="simSerialClear">Limpar</button>
+        </div>
+        <div class="serial-out" id="simSerialOut"></div>
+        <form class="serial-in" id="simSerialForm">
+          <input id="simSerialInput" placeholder="N, D, P, S…" autocomplete="off" aria-label="Comando UART da simulação">
+          <button class="btn small" type="submit">Enviar</button>
+        </form>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ======================= APRESENTAÇÃO ======================= -->
+  <section id="view-apresentacao" class="view" aria-label="Apresentação">
+    <div class="doc-wrap">
+      <nav class="toc" id="toc" aria-label="Sumário">
+        <a href="#apresentacao" data-sec="ap-problema">1 · Problema</a>
+        <a href="#apresentacao" data-sec="ap-historico">2 · Histórico</a>
+        <a href="#apresentacao" data-sec="ap-eps">3 · Entradas e saídas</a>
+        <a href="#apresentacao" data-sec="ap-blocos">4 · Diagrama de blocos</a>
+        <a href="#apresentacao" data-sec="ap-conexoes">5 · Mapa de conexões</a>
+        <a href="#apresentacao" data-sec="ap-estados">6 · Máquina de estados</a>
+        <a href="#apresentacao" data-sec="ap-protocolos">7 · Protocolos e periféricos</a>
+        <a href="#apresentacao" data-sec="ap-justificativa">8 · Polling, ISR, timers e RTOS</a>
+        <a href="#apresentacao" data-sec="ap-prioridade">9 · Prioridade e concorrência</a>
+        <a href="#apresentacao" data-sec="ap-testes">10 · Plano de testes</a>
+        <a href="#apresentacao" data-sec="ap-demo">11 · Demonstração</a>
+        <a href="#apresentacao" data-sec="ap-equipe">12 · Divisão das atividades</a>
+        <a href="#apresentacao" data-sec="ap-limites">13 · Limitações e melhorias</a>
+        <a href="#apresentacao" data-sec="ap-refs">14 · Referências</a>
+      </nav>
+      <article class="doc">
+        <header class="doc-title">
+          <div class="eyebrow">APRESENTAÇÃO · SISTEMAS EMBARCADOS</div>
+          <h1>Travessia Inteligente</h1>
+          <p>Semáforo de pedestres com cancela automática, construído a partir do projeto "Arduino + sensor ultrassônico + servo" (Arduino Titan, simulador Wokwi).</p>
+        </header>
+
+        <section id="ap-problema">
+          <h2><span class="num">01</span>O problema</h2>
+          <p>Em travessias de escolas, hospitais e campi, o pedestre depende do motorista respeitar o vermelho. Semáforos de tempo fixo param os carros mesmo sem ninguém para atravessar e, no fim do tempo, liberam os veículos mesmo que um idoso ainda esteja na faixa.</p>
+          <p>O sistema resolve três pontos:</p>
+          <ul>
+            <li><b>Sob demanda:</b> só interrompe o trânsito quando alguém aperta o botão, e sempre depois de um verde mínimo.</li>
+            <li><b>Barreira física:</b> uma cancela (o servo do vídeo) bloqueia a faixa dos carros enquanto o pedestre atravessa.</li>
+            <li><b>Pedestre lento:</b> o sensor ultrassônico (também do vídeo) confere se ainda há alguém na faixa e estende o tempo até um limite.</li>
+          </ul>
+          <div class="callout">Do vídeo aproveitamos o Arduino Uno, o HC-SR04 (TRIG no D6, ECHO no D7), o servo no D9 e a fórmula <code>distância = 0,017 × tempo</code>. A troca do <code>delay(500)</code> por tarefas e timers é a principal mudança.</div>
+        </section>
+
+        <section id="ap-historico">
+          <h2><span class="num">02</span>Contexto e breve histórico dos sistemas embarcados</h2>
+          <p>Um sistema embarcado é um computador dedicado a uma única função, dentro do equipamento que controla, com restrições de memória, energia e tempo de resposta. Semáforos estão entre as primeiras aplicações urbanas desse tipo de controle.</p>
+          <ul class="timeline">
+            <li><b>1912</b><span>Primeiro semáforo elétrico (Salt Lake City, EUA), acionado manualmente.</span></li>
+            <li><b>1966</b><span>Apollo Guidance Computer: considerado o primeiro sistema embarcado moderno, com circuitos integrados.</span></li>
+            <li><b>1971</b><span>Intel 4004, o primeiro microprocessador comercial, criado para uma calculadora.</span></li>
+            <li><b>1976</b><span>Intel 8048: CPU, memória e E/S num único chip (microcontrolador). Em 1980 vem o 8051, usado até hoje.</span></li>
+            <li><b>1996</b><span>Atmel lança a família AVR, com memória Flash regravável. O ATmega328P do Uno é um AVR.</span></li>
+            <li><b>2003</b><span>Richard Barry publica o FreeRTOS, sistema operacional de tempo real aberto para microcontroladores.</span></li>
+            <li><b>2005</b><span>Nasce o Arduino no Interaction Design Institute Ivrea (Itália), para ensino de eletrônica.</span></li>
+            <li><b>2010s</b><span>Simuladores online como Tinkercad e Wokwi permitem testar firmware sem hardware, como no vídeo de referência.</span></li>
+          </ul>
+        </section>
+
+        <section id="ap-eps">
+          <h2><span class="num">03</span>Entradas, processamento e saídas</h2>
+          <div class="cols-3">
+            <div class="box in"><h3>Entradas</h3><ul>
+              <li>Botão de pedestre · D2 (interrupção INT0)</li>
+              <li>Botão de modo dia/noite · D4 (polling)</li>
+              <li>HC-SR04 · ECHO no D7 (polling a cada 100 ms)</li>
+              <li>Comandos UART · RX (N, D, P, S)</li></ul></div>
+            <div class="box proc"><h3>Processamento</h3><ul>
+              <li>ATmega328P a 16 MHz com FreeRTOS</li>
+              <li>ISR do botão: debounce e aviso à FSM</li>
+              <li>FSM de 6 estados com timers por <code>millis()</code></li>
+              <li>Regras de segurança: verde mínimo, vermelho geral, limite de extensões</li></ul></div>
+            <div class="box out"><h3>Saídas</h3><ul>
+              <li>LEDs dos veículos · D3, D5, D11 (PWM)</li>
+              <li>LEDs do pedestre · D12, D13</li>
+              <li>Buzzer · D8</li>
+              <li>Servo da cancela · D9 (PWM 50 Hz)</li>
+              <li>Monitor Serial · TX</li></ul></div>
+          </div>
+        </section>
+
+        <section id="ap-blocos">
+          <h2><span class="num">04</span>Diagrama de blocos</h2>
+          <p>Entradas à esquerda, processamento no centro, comunicação e saídas à direita. As setas indicam o sentido do dado.</p>
+          <div class="diagram" id="blockDiagram"></div>
+        </section>
+
+        <section id="ap-conexoes">
+          <h2><span class="num">05</span>Mapa de conexões entre Arduino e módulos</h2>
+          <div class="tbl-wrap"><table class="tbl" id="pinTable">
+            <thead><tr><th>Pino Uno</th><th>Módulo</th><th>Terminal</th><th>Modo</th><th>Recurso do MCU</th><th>Observação</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">D2</td><td>Botão de pedestre</td><td>terminal 1 (outro no GND)</td><td class="mono">INPUT_PULLUP</td><td>INT0, borda de descida</td><td>Debounce de 200 ms na ISR</td></tr>
+              <tr><td class="mono">D3</td><td>LED verde veículos</td><td>anodo (via 220 Ω ao GND)</td><td class="mono">OUTPUT</td><td>PWM Timer2</td><td>Brilho 255 / 80</td></tr>
+              <tr><td class="mono">D4</td><td>Botão de modo</td><td>terminal 1 (outro no GND)</td><td class="mono">INPUT_PULLUP</td><td>GPIO</td><td>Lido por polling a cada 50 ms</td></tr>
+              <tr><td class="mono">D5</td><td>LED amarelo veículos</td><td>anodo (via 220 Ω)</td><td class="mono">OUTPUT</td><td>PWM Timer0</td><td>Timer0 também gera o <code>millis()</code></td></tr>
+              <tr><td class="mono">D6</td><td>HC-SR04</td><td>TRIG</td><td class="mono">OUTPUT</td><td>GPIO</td><td>Mesmo pino do vídeo</td></tr>
+              <tr><td class="mono">D7</td><td>HC-SR04</td><td>ECHO</td><td class="mono">INPUT</td><td>GPIO + <code>pulseIn</code></td><td>Mesmo pino do vídeo</td></tr>
+              <tr><td class="mono">D8</td><td>Buzzer ativo</td><td>+ (− no GND)</td><td class="mono">OUTPUT</td><td>GPIO</td><td>Não usa <code>tone()</code>, que ocuparia o Timer2</td></tr>
+              <tr><td class="mono">D9</td><td>Servo SG90</td><td>sinal (laranja)</td><td class="mono">OUTPUT</td><td>Timer1 (lib Servo)</td><td>Mesmo pino do vídeo; deixa D10 sem PWM</td></tr>
+              <tr><td class="mono">D11</td><td>LED vermelho veículos</td><td>anodo (via 220 Ω)</td><td class="mono">OUTPUT</td><td>PWM Timer2</td><td>Brilho 255 / 80</td></tr>
+              <tr><td class="mono">D12</td><td>LED vermelho pedestre</td><td>anodo (via 220 Ω)</td><td class="mono">OUTPUT</td><td>GPIO</td><td>Pisca a 2 Hz no fim da travessia</td></tr>
+              <tr><td class="mono">D13</td><td>LED verde pedestre</td><td>anodo (via 220 Ω)</td><td class="mono">OUTPUT</td><td>GPIO</td><td>Acende junto com o LED "L" da placa</td></tr>
+              <tr><td class="mono">5V</td><td>HC-SR04 e servo</td><td>VCC / V+ (vermelho)</td><td class="mono">—</td><td>Regulador da placa / USB</td><td>Servo em fonte externa é recomendado</td></tr>
+              <tr><td class="mono">GND</td><td>Todos</td><td>barramento − da protoboard</td><td class="mono">—</td><td>—</td><td>Referência comum</td></tr>
+              <tr><td class="mono">USB</td><td>Computador</td><td>UART (TX/RX)</td><td class="mono">9600 8N1</td><td>USART0 via ATmega16U2</td><td>Logger e comandos</td></tr>
+            </tbody>
+          </table></div>
+          <div class="callout">Conflito de timers no Uno: a biblioteca Servo ocupa o Timer1 (PWM do D9 e D10) e <code>tone()</code> ocuparia o Timer2 (PWM do D3 e D11). Por isso usamos buzzer ativo e deixamos os LEDs com PWM nos pinos 3, 5 e 11.</div>
+        </section>
+
+        <section id="ap-estados">
+          <h2><span class="num">06</span>Sequência de estados</h2>
+          <p>Cada estado só termina quando o seu timer acaba. Um pedido de pedestre muda uma variável, nunca a fase atual.</p>
+          <div class="diagram" id="fsmDiagram"></div>
+          <div class="tbl-wrap"><table class="tbl">
+            <thead><tr><th>Estado</th><th>Veículos</th><th>Pedestre</th><th>Cancela</th><th>Sai quando</th><th class="num">Dia</th><th class="num">Noite</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">S0 VEIC_VERDE</td><td>verde</td><td>vermelho</td><td>aberta (0°)</td><td>pedido pendente e verde mínimo cumprido</td><td class="num">≥ 10 s</td><td class="num">≥ 4 s</td></tr>
+              <tr><td class="mono">S1 VEIC_AMARELO</td><td>amarelo</td><td>vermelho</td><td>aberta</td><td>tempo</td><td class="num">3 s</td><td class="num">4 s</td></tr>
+              <tr><td class="mono">S2 TODOS_VERMELHO</td><td>vermelho</td><td>vermelho</td><td>descendo → 90°</td><td>tempo</td><td class="num">1 s</td><td class="num">2 s</td></tr>
+              <tr><td class="mono">S3 PED_VERDE</td><td>vermelho</td><td>verde + bipe lento</td><td>fechada</td><td>tempo</td><td class="num">7 s</td><td class="num">10 s</td></tr>
+              <tr><td class="mono">S4 PED_PISCANDO</td><td>vermelho</td><td>vermelho piscando + bipe rápido</td><td>fechada</td><td>tempo; se faixa ocupada, +extensão (máx. 2)</td><td class="num">4 s (+2 s)</td><td class="num">5 s (+3 s)</td></tr>
+              <tr><td class="mono">S5 LIBERANDO</td><td>vermelho</td><td>vermelho</td><td>subindo → 0°</td><td>tempo</td><td class="num">1,5 s</td><td class="num">1,5 s</td></tr>
+            </tbody>
+          </table></div>
+          <p style="margin-top:14px">No modo noturno os LEDs operam com PWM a 31% (80/255) para reduzir o ofuscamento, o verde mínimo cai para 4 s (pouco trânsito) e o pedestre ganha mais tempo (menor visibilidade). A troca é feita pelo comando <code>N</code>/<code>D</code> na UART ou pelo botão D4.</p>
+        </section>
+
+        <section id="ap-protocolos">
+          <h2><span class="num">07</span>Protocolos e periféricos utilizados</h2>
+          <div class="tbl-wrap"><table class="tbl">
+            <thead><tr><th>Periférico / protocolo</th><th>Onde</th><th>Parâmetros</th><th>Uso no projeto</th></tr></thead>
+            <tbody>
+              <tr><td>GPIO</td><td>D2, D4, D6, D7, D8, D12, D13</td><td>5 V TTL, pull-up interno</td><td>Botões, TRIG/ECHO, buzzer, LEDs do pedestre</td></tr>
+              <tr><td>Interrupção externa</td><td>INT0 (D2)</td><td>borda de descida</td><td>Registrar a solicitação de travessia</td></tr>
+              <tr><td>Timers</td><td>Timer0, Timer1, Timer2 e Watchdog</td><td>T0: <code>millis()</code> · T1: Servo · WDT: tick de ~15 ms do FreeRTOS</td><td>Duração das fases sem bloquear</td></tr>
+              <tr><td>PWM</td><td>D3, D5, D11 · D9</td><td>~490/980 Hz (LEDs) · 50 Hz, 0,54–2,4 ms (servo)</td><td>Brilho dos LEDs e posição da cancela</td></tr>
+              <tr><td>UART</td><td>USART0 → USB</td><td>9600 bps, 8 bits, sem paridade, 1 stop</td><td>Logger de estados/eventos e comandos N, D, P, S</td></tr>
+              <tr><td>Pulso ultrassônico</td><td>HC-SR04</td><td>TRIG 10 µs; ECHO de 116 µs (2 cm) a 23,5 ms (400 cm)</td><td>Presença de pedestre na faixa</td></tr>
+            </tbody>
+          </table></div>
+        </section>
+
+        <section id="ap-justificativa">
+          <h2><span class="num">08</span>Por que polling, interrupção, timers e RTOS</h2>
+          <div class="concepts">
+            <div class="concept"><h3>Interrupção</h3><span class="where">isrBotaoPedestre() · D2/INT0</span><p>O toque no botão dura ~100 ms e pode acontecer a qualquer momento. A interrupção garante que ele seja percebido mesmo que a CPU esteja ocupada no <code>pulseIn()</code>. A ISR só filtra o bounce e entrega um semáforo; quem decide é a FSM.</p></div>
+            <div class="concept"><h3>Polling</h3><span class="where">tarefaSensor() 100 ms · tarefaEntradas() 50 ms</span><p>O sensor precisa ser disparado ativamente, então é consultado periodicamente. O botão de modo não é urgente (atraso de 50 ms é irrelevante) e a leitura periódica já filtra o bounce comparando duas leituras.</p></div>
+            <div class="concept"><h3>Timers</h3><span class="where">millis() − inicioFase · vTaskDelayUntil</span><p>Cada fase compara o tempo decorrido com a duração, em vez de usar <code>delay()</code>. No código do vídeo, <code>delay(500)</code> trava tudo: nenhum botão seria lido nesse meio segundo.</p></div>
+            <div class="concept"><h3>RTOS</h3><span class="where">FreeRTOS · 5 tarefas</span><p>Separar FSM, sensor, entradas, sinalização e logger deixa cada função simples e com período próprio. O escalonador preemptivo garante que a FSM (prioridade 3) rode no horário mesmo durante um <code>pulseIn()</code> de 30 ms.</p></div>
+            <div class="concept"><h3>PWM</h3><span class="where">analogWrite(3/5/11) · Servo D9</span><p>Varia o brilho dos LEDs (modo noturno a 31%) e define o ângulo do servo pela largura do pulso.</p></div>
+            <div class="concept"><h3>UART</h3><span class="where">tarefaLogger() · tarefaEntradas()</span><p>Só o Logger escreve na serial, recebendo eventos por fila. Assim duas tarefas nunca misturam texto, e quem gera o evento não espera os ~1 ms por caractere da UART a 9600 bps.</p></div>
+          </div>
+        </section>
+
+        <section id="ap-prioridade">
+          <h2><span class="num">09</span>Como o sistema prioriza eventos e coordena atividades</h2>
+          <div class="tbl-wrap"><table class="tbl">
+            <thead><tr><th>Atividade</th><th class="num">Prioridade</th><th>Período</th><th>Comunica com</th><th>Por quê</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">ISR botão</td><td class="num">hardware</td><td>evento</td><td>semáforo binário → FSM</td><td>Nunca perder um pedido; dura poucos µs</td></tr>
+              <tr><td class="mono">FSM</td><td class="num">3</td><td>45 ms</td><td>lê semáforo e variáveis; escreve estado</td><td>Segurança: transições sempre no tempo certo</td></tr>
+              <tr><td class="mono">SENSOR</td><td class="num">2</td><td>100 ms</td><td>escreve distância (seção crítica)</td><td>Dado necessário no fim do piscante</td></tr>
+              <tr><td class="mono">ENTRADAS</td><td class="num">2</td><td>50 ms</td><td>modo, semáforo (comando P), fila de log</td><td>Interação com o operador</td></tr>
+              <tr><td class="mono">SINALIZAÇÃO</td><td class="num">1</td><td>20 ms</td><td>lê estado; aciona pinos</td><td>Só reflete o estado; atraso de 1 tick não é perigoso</td></tr>
+              <tr><td class="mono">LOGGER</td><td class="num">1</td><td>bloqueado na fila</td><td>fila de eventos → UART</td><td>Diagnóstico; não pode atrasar o controle</td></tr>
+            </tbody>
+          </table></div>
+          <ul style="margin-top:16px">
+            <li><b>Pedido nunca corta fase:</b> durante amarelo, vermelho geral e verde do pedestre ele é ignorado (a travessia já está acontecendo); no piscante e no LIBERANDO ele fica guardado para o próximo ciclo.</li>
+            <li><b>Dados compartilhados:</b> variáveis <code>volatile</code>; a distância (float de 4 bytes) é lida dentro de <code>taskENTER_CRITICAL()</code>, porque o AVR copia 1 byte por instrução.</li>
+            <li><b>Segurança primeiro:</b> vermelho geral de 1 s antes de baixar a cancela e limite de 2 extensões para não prender os carros indefinidamente.</li>
+          </ul>
+        </section>
+
+        <section id="ap-testes">
+          <h2><span class="num">10</span>Plano de testes</h2>
+          <p>Cada teste executa o emulador do firmware (mesma lógica do .ino) em tempo acelerado e preenche o resultado observado.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+            <button class="btn primary" id="runTests">Executar todos os testes</button>
+            <span class="obs" id="testSummary" style="align-self:center"></span>
+          </div>
+          <div class="tbl-wrap"><table class="tbl" id="testTable">
+            <thead><tr><th>ID</th><th>Teste</th><th>Condição testada</th><th>Resultado esperado</th><th>Resultado observado</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </section>
+
+        <section id="ap-demo">
+          <h2><span class="num">11</span>Demonstração: cenário normal e de falha</h2>
+          <div class="scen">
+            <div class="box"><h3>Cenário normal</h3><p>Pedestre chega, aperta o botão; o verde mínimo é respeitado, o semáforo passa por amarelo e vermelho geral, a cancela desce, o pedestre atravessa com bipe e a cancela sobe.</p><a class="btn primary" href="#simulacao" data-demo="normal">Rodar na simulação</a></div>
+            <div class="box"><h3>Cenário de limite</h3><p>Pedestre idoso não termina a travessia no tempo. O sensor detecta presença e concede extensões. Com uma pessoa parada na faixa, o limite de 2 extensões é atingido e a UART registra o aviso.</p><a class="btn warn" href="#simulacao" data-demo="limite">Rodar na simulação</a></div>
+            <div class="box"><h3>Cenário de falha</h3><p>O HC-SR04 é desconectado. Após 3 leituras sem eco, o firmware registra ERRO e continua operando só por tempo, sem extensões. O botão segue funcionando.</p><a class="btn danger" href="#simulacao" data-demo="falha">Rodar na simulação</a></div>
+            <div class="box"><h3>Bounce do botão</h3><p>Dez bordas em menos de 100 ms (contato trepidando). A ISR é chamada dez vezes, mas só um pedido é registrado.</p><a class="btn warn" href="#simulacao" data-demo="bounce">Rodar na simulação</a></div>
+          </div>
+        </section>
+
+        <section id="ap-equipe">
+          <h2><span class="num">12</span>Divisão das atividades do grupo</h2>
+          <p>Clique nos textos para editar os nomes e as tarefas. As alterações ficam salvas neste navegador.</p>
+          <div class="team" id="team"></div>
+        </section>
+
+        <section id="ap-limites">
+          <h2><span class="num">13</span>Limitações e melhorias possíveis</h2>
+          <div class="cols-2">
+            <div class="box"><h3>Limitações</h3><ul>
+              <li>Na simulação a zona monitorada cobre a faixa inteira. Um HC-SR04 real (cone de ~15°, ≈ 1,9 m de diâmetro a 3,5 m) cobre só o centro: na rua seriam necessários 2 a 4 sensores ou um radar.</li>
+              <li>Ultrassom sofre com chuva, vento e superfícies que absorvem o som.</li>
+              <li>2 KB de RAM: as 5 pilhas do FreeRTOS somam ~830 bytes; sobra pouco espaço.</li>
+              <li>Servo alimentado pelo 5 V da USB pode causar reset em picos de corrente.</li>
+              <li>Buzzer de ~25 mA direto no pino passa do recomendado (20 mA).</li>
+              <li>Na cancela de estacionamento (código original), sem eco a cancela abre e veículo longo pode ser atingido.</li>
+            </ul></div>
+            <div class="box"><h3>Melhorias</h3><ul>
+              <li>Sensor de visão ou radar mmWave para cobrir a faixa inteira.</li>
+              <li>Fonte externa de 5 V para o servo com GND comum; transistor para o buzzer.</li>
+              <li>Watchdog de hardware para reiniciar em travamento e estado seguro (amarelo piscante).</li>
+              <li>ESP32 com Wi-Fi para enviar contagem de travessias e alarmes de falha.</li>
+              <li>Laço indutivo ou segundo sensor na cancela de estacionamento.</li>
+              <li>Botão com retorno tátil e sinal sonoro localizável para deficientes visuais.</li>
+            </ul></div>
+          </div>
+        </section>
+
+        <section id="ap-refs">
+          <h2><span class="num">14</span>Referências</h2>
+          <ul>
+            <li>Vídeo base: <a href="https://www.youtube.com/watch?v=SRs85c1JbKE" target="_blank" rel="noopener">Arduino with ultrasonic sensor + Servo Motor · Wokwi · Arduino Titan</a></li>
+            <li>Simulador: <a href="https://wokwi.com" target="_blank" rel="noopener">wokwi.com</a> (o arquivo <code>diagram.json</code> do projeto está no botão "Mostrar código")</li>
+            <li>FreeRTOS para AVR: biblioteca <a href="https://github.com/feilipu/Arduino_FreeRTOS_Library" target="_blank" rel="noopener">Arduino_FreeRTOS_Library</a> (feilipu)</li>
+            <li>Datasheets: ATmega328P (Microchip), HC-SR04 (ElecFreaks), SG90 (TowerPro)</li>
+            <li>Código-fonte completo: pasta <code>firmware/</code> deste site</li>
+          </ul>
+        </section>
+      </article>
+    </div>
+  </section>
+</main>
+
+<!-- ======================= MODAL DE CÓDIGO ======================= -->
+<div class="modal" id="codeModal" hidden role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="codeTitle">Código-fonte</h2>
+      <div class="tabs" role="tablist" id="codeTabs">
+        <button role="tab" data-file="travessia" aria-selected="true">travessia_inteligente.ino</button>
+        <button role="tab" data-file="video" aria-selected="false">video_original.ino</button>
+        <button role="tab" data-file="diagram" aria-selected="false">diagram.json</button>
+        <button role="tab" data-file="libraries" aria-selected="false">libraries.txt</button>
+      </div>
+      <div class="right">
+        <button class="btn small" id="codeCopy">Copiar</button>
+        <button class="btn small" id="codeClose">Fechar</button>
+      </div>
+    </div>
+    <div class="code-note" id="codeNote"></div>
+    <div class="code-wrap" id="codeWrap"><pre class="code" id="codePre"></pre></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js" integrity="sha384-wagZhIFgY4hD+7awjQjR4e2E294y6J2HSnd8eTNc15ZubTeQeVRZwhQJ+W6hnBsf" crossorigin="anonymous"></script>
+<script src="js/code-data.js?v=7"></script>
+<script src="js/firmware.js?v=7"></script>
+<script src="js/content.js?v=7"></script>
+<script src="js/kit3d.js?v=7"></script>
+<script src="js/project3d.js?v=7"></script>
+<script src="js/sim3d.js?v=7"></script>
+<script src="js/app.js?v=7"></script>
+</body>
+</html>
