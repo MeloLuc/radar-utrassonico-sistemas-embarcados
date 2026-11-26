@@ -470,15 +470,16 @@
 
   // equipe (editável, salva no navegador)
   const TEAM_DEFAULT = [
-    { who: 'Integrante 1', role: 'Firmware e RTOS', tasks: ['Tarefas FreeRTOS e prioridades', 'Máquina de estados', 'Modo noturno'] },
-    { who: 'Integrante 2', role: 'Hardware e montagem', tasks: ['Mapa de conexões', 'Montagem no Wokwi e protoboard', 'Cálculo dos resistores'] },
-    { who: 'Integrante 3', role: 'Testes e validação', tasks: ['Plano de testes', 'Cenários de falha e limite', 'Registro dos resultados'] },
-    { who: 'Integrante 4', role: 'Documentação e apresentação', tasks: ['Diagrama de blocos', 'Histórico e contexto', 'Roteiro da demonstração'] }
+    { who: 'Cauã Cavalcante Gonçalves', role: 'Firmware e RTOS', tasks: ['Tarefas FreeRTOS e prioridades', 'Máquina de estados', 'Modo noturno'] },
+    { who: 'Ivo Henrique Lima dos Santos', role: 'Hardware e montagem', tasks: ['Mapa de conexões', 'Montagem no Wokwi e protoboard', 'Cálculo dos resistores'] },
+    { who: 'Jhonatas José Santana', role: 'Testes e validação', tasks: ['Plano de testes', 'Cenários de falha e limite', 'Registro dos resultados'] },
+    { who: 'Lucas de Melo Monteiro Peixoto', role: 'Simulação 3D e site', tasks: ['Cenas 3D da bancada e da aplicação', 'Emulador do firmware no navegador', 'Publicação do site'] },
+    { who: 'Paulo Ricardo Oliveira Santos', role: 'Documentação e apresentação', tasks: ['Diagrama de blocos', 'Histórico e contexto', 'Roteiro da demonstração'] }
   ];
-  function loadTeam() { try { const v = JSON.parse(localStorage.getItem('ti-team')); if (Array.isArray(v)) return v; } catch (e) { /* sem armazenamento */ } return TEAM_DEFAULT; }
+  function loadTeam() { try { const v = JSON.parse(localStorage.getItem('ti-team-v2')); if (Array.isArray(v)) return v; } catch (e) { /* sem armazenamento */ } return TEAM_DEFAULT; }
   function saveTeam() {
     const data = $$('#team .member').map(m => ({ who: $('.who', m).textContent, role: $('.role', m).textContent, tasks: $$('li', m).map(l => l.textContent) }));
-    try { localStorage.setItem('ti-team', JSON.stringify(data)); } catch (e) { /* ignora */ }
+    try { localStorage.setItem('ti-team-v2', JSON.stringify(data)); } catch (e) { /* ignora */ }
   }
   function buildTeam() {
     $('#team').innerHTML = loadTeam().map(m => '<div class="member"><div class="who" contenteditable="true" spellcheck="false">' + esc(m.who) + '</div><div class="role" contenteditable="true">' + esc(m.role) +
